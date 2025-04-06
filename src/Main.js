@@ -1,22 +1,7 @@
-import * as THREE from 'three';
+import App from 'src/App.js'
 
-
-
-
-export const scene = new THREE.Scene();
-export const camera = new THREE.PerspectiveCamera(
-    90, window.innerWidth / window.innerHeight, 0.1, 1000);
-export const renderer = new THREE.WebGLRenderer({
-    antialias: true,
-});
-renderer.shadowMap.enabled = true;
-document.body.appendChild(renderer.domElement);
-renderer.setAnimationLoop(() => update(clock.getDelta()));
-
-window.addEventListener('resize', () => windowResize());
-windowResize();
-
-
+const app = new App()
+app.init();
 
 /**
  * Goal is to make a scene with models that can be moved around. Models have collision management or interaction that involves
