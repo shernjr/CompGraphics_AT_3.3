@@ -9,15 +9,17 @@ export default class ObjectManager {
     }
 
     loadModel(name, path, onLoaded) {
-        this.loader.load(path, (gltf) => {const model = gltf.scene; model.name = name;
-                //optionally store clone for reuse.
-                this.models[name] = model; 
-                onLoaded?.(model);
+        this.loader.load(path, (gltf) => {
+            const model = gltf.scene;
+            model.name = name;
+            this.models[name] = model; 
 
-            },
-                undefined, (error) => {console.error(`Error loading model ${name}:`, error);
-            }
-        );
+            //optionally store clone for reuse.
+            onLoaded?.(model);
+
+        }, undefined, (error) => {
+            console.error(`Error loading model ${name}:`, error);
+        });
     }
 
     placeClone(name, position, scale = 1) {

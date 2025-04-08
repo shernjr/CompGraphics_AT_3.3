@@ -29,7 +29,20 @@ export default class App {
 
         this.objectManager = new ObjectManager(this.scene);
 
-        this.objectManager.loadModel('bathroom vanity', '/assets/models/bathroom_vanity.glb', () => {console.log('Model loaded');});
+        this.objectManager.loadModel('bathroom vanity', '/assets/models/bathroom_vanity.glb', (model) => {
+            console.log('vanity model loaded');
+            this.scene.add(model);
+          });
+
+          this.objectManager.loadModel('mug', '/assets/models/mug.glb', (model) => {
+            console.log('glass mug model loaded');
+
+            model.scale.set(0.3, 0.3, 0.3);
+            model.position.set(0, 1, 0);
+
+            this.scene.add(model);
+          });
+
 
         this.setupClickToPlace();
 
@@ -83,7 +96,7 @@ export default class App {
             const point = intersects[0].point;
     
             // Place the cup at the clicked point
-            this.objectManager.placeClone('cup', point, 0.5);
+            this.objectManager.placeClone('mug', point, 0.2);
           }
         });
       }
