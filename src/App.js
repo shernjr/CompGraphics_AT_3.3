@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import {OrbitControls} from '../lib/OrbitControls.js';
-import { transformWithEsbuild } from 'vite';
+import ObjectManager from '../src/managers/ObjectManager.js';
 
 export default class App {
     constructor() {
@@ -18,7 +18,7 @@ export default class App {
         })
         this.renderer.setSize(window.innerWidth, window.innerHeight);
 
-        this.controls = OrbitControls(this.camera, this.renderer.domElement);
+        this.controls = new OrbitControls(this.camera, this.renderer.domElement);
 
         this.animate = this.animate.bind(this);
     }
@@ -26,6 +26,12 @@ export default class App {
     init() {
         this.addLights();
         this.addFloor();
+
+        this.objectManager = new ObjectManager(this.scene);
+
+        this.objectManager.loadModel('bathroom vanity', '/assets/models/bathroom_vanity.glb', () => {console.log('Model loaded');});
+
+        this.setupClickToPlace();
 
         this.animate();
         window.addEventListener('resize', this.onWindowResize.bind(this));
@@ -35,7 +41,7 @@ export default class App {
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
         this.scene.add(ambientLight);
 
-        const directionalLight = new THREE.directionalLight(0xffffff, 1);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
         directionalLight.position.set(5, 10, 7.5);
         this.scene.add(directionalLight);
     }
@@ -43,7 +49,7 @@ export default class App {
     addFloor() {
         const floor = new THREE.Mesh(
             new THREE.PlaneGeometry(10, 10),
-            new THREE.MeshStandardMaterial({ color: 0xe0e0e })
+            new THREE.MeshStandardMaterial({ color: 0xe0e0e0 })
         );
 
         floor.rotation.x = -Math.PI / 2;
@@ -61,4 +67,24 @@ export default class App {
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
     }
+
+    setupClickToPlace() {
+        this.renderer.domElement.addEventListener('click', (event) => {
+          const mouse = new THREE.Vector2(
+            (event.clientX / window.innerWidth) * 2 - 1,
+            -(event.clientY / window.innerHeight) * 2 + 1
+          );
+    
+          const raycaster = new THREE.Raycaster();
+          raycaster.setFromCamera(mouse, this.camera);
+    
+          const intersects = raycaster.intersectObjects(this.scene.children, true);
+          if (intersects.length > 0) {
+            const point = intersects[0].point;
+    
+            // Place the cup at the clicked point
+            this.objectManager.placeClone('cup', point, 0.5);
+          }
+        });
+      }
 }
