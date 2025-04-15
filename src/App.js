@@ -1,7 +1,9 @@
 import * as THREE from 'three';
 import ScaleUI from '../src/ui/ScaleUI.js';
+import RotateUI from '../src/ui/RotateUI.js';
 import {OrbitControls} from '../lib/OrbitControls.js';
 import ObjectManager from '../src/managers/ObjectManager.js';
+import InteractionHandler from './managers/InteractionHandler.js';
 
 export default class App {
     constructor() {
@@ -10,6 +12,7 @@ export default class App {
 
         this.selectedObject = null;
         this.ScaleUI = new ScaleUI();
+        this.RotateUI = new RotateUI();
 
         this.camera = new THREE.PerspectiveCamera (75, window.innerWidth / window.innerHeight, 
             0.1, 1000);
@@ -57,6 +60,7 @@ export default class App {
           this.scene.add(model);
         });
 
+        this.InteractionHandler = new InteractionHandler(this.renderer, this.camera, this.scene, this.controls);
 
         this.setupObjectSelection();
 
@@ -113,6 +117,7 @@ export default class App {
     
           // Use ScaleUI to handle the UI side
           this.ScaleUI.show(root);
+          this.RotateUI.show(root);
         }
       });
     }
