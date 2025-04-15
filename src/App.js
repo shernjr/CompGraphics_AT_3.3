@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import ScaleUI from '../src/ui/ScaleUI.js';
 import {OrbitControls} from '../lib/OrbitControls.js';
 import ObjectManager from '../src/managers/ObjectManager.js';
 
@@ -6,6 +7,9 @@ export default class App {
     constructor() {
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0xf0f0f0);
+
+        this.selectedObject = null;
+        this.ScaleUI = new ScaleUI();
 
         this.camera = new THREE.PerspectiveCamera (75, window.innerWidth / window.innerHeight, 
             0.1, 1000);
@@ -29,22 +33,32 @@ export default class App {
 
         this.objectManager = new ObjectManager(this.scene);
 
-        this.objectManager.loadModel('bathroom vanity', '/assets/models/bathroom_vanity.glb', (model) => {
-            console.log('vanity model loaded');
+        this.objectManager.loadModel('bathroom cabinet', '/assets/models/bathroom_cabinet.glb', (model) => {
+            console.log('bathroom cabinet model loaded');
             this.scene.add(model);
-          });
+        });
 
-          this.objectManager.loadModel('mug', '/assets/models/mug.glb', (model) => {
-            console.log('glass mug model loaded');
+        this.objectManager.loadModel('soap dispenser', '/assets/models/soap_dispenser.glb', (model) => {
+          console.log('soap dispenser model loaded');
+          this.scene.add(model);
+        });
 
-            model.scale.set(0.3, 0.3, 0.3);
-            model.position.set(0, 1, 0);
+        this.objectManager.loadModel('electric toothbrush', '/assets/models/electric_toothbrush.glb', (model) => {
+          console.log('electric toothbrush model loaded');
+          this.scene.add(model);
+        });
 
-            this.scene.add(model);
-          });
+        this.objectManager.loadModel('mug', '/assets/models/mug.glb', (model) => {
+          console.log('glass mug model loaded');
+
+          model.scale.set(0.3, 0.3, 0.3);
+          model.position.set(0, 1, 0);
+
+          this.scene.add(model);
+        });
 
 
-        this.setupClickToPlace();
+        this.setupObjectSelection();
 
         this.animate();
         window.addEventListener('resize', this.onWindowResize.bind(this));
@@ -69,35 +83,49 @@ export default class App {
         this.scene.add(floor);
     }
 
-    animate() {
-        requestAnimationFrame(this.animate);
-        this.controls.update();
-        this.renderer.render(this.scene, this.camera);
-    }
-
-    onWindowResize() {
-        this.camera.aspect = window.innerWidth / window.innerHeight;
-        this.camera.updateProjectionMatrix();
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
-    }
-
-    setupClickToPlace() {
-        this.renderer.domElement.addEventListener('click', (event) => {
-          const mouse = new THREE.Vector2(
-            (event.clientX / window.innerWidth) * 2 - 1,
-            -(event.clientY / window.innerHeight) * 2 + 1
-          );
+    setupObjectSelection() {
+      this.renderer.domElement.addEventListener('click', (event) => {
+        const mouse = new THREE.Vector2(
+          (event.clientX / window.innerWidth) * 2 - 1,
+          -(event.clientY / window.innerHeight) * 2 + 1
+        );
     
-          const raycaster = new THREE.Raycaster();
-          raycaster.setFromCamera(mouse, this.camera);
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(mouse, this.camera);
     
-          const intersects = raycaster.intersectObjects(this.scene.children, true);
-          if (intersects.length > 0) {
-            const point = intersects[0].point;
+        const intersects = raycaster.intersectObjects(this.scene.children, true);
     
-            // Place the cup at the clicked point
-            this.objectManager.placeClone('mug', point, 0.2);
+        if (intersects.length > 0) {
+          const selectedMesh = intersects[0].object;
+    
+          let root = selectedMesh;
+          while (root.parent && root.parent.type !== 'Scene') {
+            root = root.parent;
           }
-        });
-      }
+    
+          this.selectedObject = root;
+    
+          // Attach transform controls if you're using them (optional)
+          if (this.transformControls) {
+            this.transformControls.attach(this.selectedObject);
+            this.scene.add(this.transformControls);
+          }
+    
+          // Use ScaleUI to handle the UI side
+          this.ScaleUI.show(root);
+        }
+      });
+    }
+    
+  animate() {
+      requestAnimationFrame(this.animate);
+      this.controls.update();
+      this.renderer.render(this.scene, this.camera);
+  }
+
+  onWindowResize() {
+      this.camera.aspect = window.innerWidth / window.innerHeight;
+      this.camera.updateProjectionMatrix();
+      this.renderer.setSize(window.innerWidth, window.innerHeight);
+  }
 }
