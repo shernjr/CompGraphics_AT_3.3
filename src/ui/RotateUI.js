@@ -23,6 +23,11 @@ export default class RotateUI {
       this.rotateX.value = THREE.MathUtils.radToDeg(object.rotation.x);
       this.rotateY.value = THREE.MathUtils.radToDeg(object.rotation.y);
       this.rotateZ.value = THREE.MathUtils.radToDeg(object.rotation.z);
+
+      const isLocked = object.userData?.lockRotation || object.userData?.isFloor || object.userData?.isWall;     
+      this.rotateX.disabled = isLocked;
+      this.rotateY.disabled = isLocked;
+      this.rotateZ.disabled = isLocked;
     }
   
     hide() {
@@ -31,14 +36,15 @@ export default class RotateUI {
     }
   
     updateRotation() {
-      if (this.currentObject) {
-        this.currentObject.rotation.set(
-          THREE.MathUtils.degToRad(parseFloat(this.rotateX.value)),
-          THREE.MathUtils.degToRad(parseFloat(this.rotateY.value)),
-          THREE.MathUtils.degToRad(parseFloat(this.rotateZ.value))
-        );
-        this.onRotateChange?.(this.currentObject);
-      }
+      if (!this.currentObject || this.currentObject.userData?.isFloor) return;
+    
+      this.currentObject.rotation.set(
+        THREE.MathUtils.degToRad(parseFloat(this.rotateX.value)),
+        THREE.MathUtils.degToRad(parseFloat(this.rotateY.value)),
+        THREE.MathUtils.degToRad(parseFloat(this.rotateZ.value))
+      );
+      this.onRotateChange?.(this.currentObject);
     }
+    
   }
   

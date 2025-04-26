@@ -17,11 +17,17 @@ export default class ScaleUI {
       this.currentObject = object;
       this.panel.style.display = 'block';
       this.nameLabel.textContent = `Selected: ${object.name}`;
-  
+    
       this.scaleX.value = object.scale.x;
       this.scaleY.value = object.scale.y;
       this.scaleZ.value = object.scale.z;
+    
+      const isLocked = object.userData?.lockScale || object.userData?.isFloor || object.userData?.isWall;
+      this.scaleX.disabled = isLocked;
+      this.scaleY.disabled = isLocked;
+      this.scaleZ.disabled = isLocked;
     }
+    
   
     hide() {
       this.currentObject = null;

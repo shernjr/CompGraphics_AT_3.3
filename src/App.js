@@ -107,9 +107,10 @@ export default class App {
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
         this.scene.add(ambientLight);
 
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-        directionalLight.position.set(5, 10, 7.5);
-        this.scene.add(directionalLight);
+        const sunLight = new THREE.DirectionalLight(0xffffff, 1);
+        sunLight.position.set(5, 10, 5); // above and to the side
+        sunLight.castShadow = true;
+        this.scene.add(sunLight);
     }
 
     addFloor() {
@@ -128,6 +129,26 @@ export default class App {
         floor.userData.isFloor = true;
         floor.name = 'floor';
         this.scene.add(floor);
+
+        // Back Wall (behind the vanity)
+        const backWallGeometry = new THREE.PlaneGeometry(5, 3);
+        //const wallTexture = new THREE.TextureLoader().load('/assets/textures/wall.jpg');
+        const wallMaterial = new THREE.MeshStandardMaterial({ map: texture });
+
+        const backWall = new THREE.Mesh(backWallGeometry, wallMaterial);
+        backWall.position.set(0, 1.5, -2.5); // adjust z to move it behind furniture
+        backWall.rotation.y = 0; // face forward
+        this.scene.add(backWall);
+
+        // Side Wall (left side)
+        const sideWallGeometry = new THREE.PlaneGeometry(5, 3);
+        const sideWall = new THREE.Mesh(sideWallGeometry, wallMaterial.clone());
+        sideWall.position.set(-2.5, 1.5, 0);
+        sideWall.rotation.y = Math.PI / 2; // rotate 90° to face inward
+        this.scene.add(sideWall);
+
+        backWall.userData.isWall = true;
+        sideWall.userData.isWall = true;
     }
 
     setupObjectSelection() {
