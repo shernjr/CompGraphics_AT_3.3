@@ -5,12 +5,12 @@ import { TextureLoader, RepeatWrapping } from 'three';
 import {OrbitControls} from '../lib/OrbitControls.js';
 import ObjectManager from '../src/managers/ObjectManager.js';
 import InteractionHandler from './managers/InteractionHandler.js';
-
+import CollisionManager from '../src/managers/CollisionManager.js';
 
 export default class App {
     constructor() {
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0xf0f0f0);
+        this.scene.background = new THREE.Color(0x000000);
 
         this.selectedObject = null;
         this.ScaleUI = new ScaleUI();
@@ -37,70 +37,78 @@ export default class App {
         this.addFloor();
 
         this.objectManager = new ObjectManager(this.scene);
+        this.collisionManager = new CollisionManager(this.scene);
 
-        this.objectManager.loadModel('bathroom cabinet', '/assets/models/bathroom_cabinet.glb', (model) => {
-            console.log('bathroom cabinet model loaded');            
-            model.scale.set(1.2, 1.2, 1.2);
-            model.position.set(0.5, -0.5, 0);
-            this.scene.add(model);
-        });
-
-        this.objectManager.loadModel('soap dispenser', '/assets/models/soap_dispenser.glb', (model) => {
-          console.log('soap dispenser model loaded');
-          model.userData.snapToFloor = true;
-          model.scale.set(0.05, 0.05, 0.05);
-          model.position.set(1, 0, 0);
-          this.scene.add(model);
-        });
-
-        this.objectManager.loadModel('electric toothbrush', '/assets/models/electric_toothbrush.glb', (model) => {
-          console.log('electric toothbrush model loaded');
-          model.userData.snapToFloor = true;
-          model.scale.set(2, 2, 2);
-          model.position.set(2, 0, 0);
-          this.scene.add(model);
-        });
-
-        this.objectManager.loadModel('mug', '/assets/models/mug.glb', (model) => {
-          console.log('glass mug model loaded');
-          model.userData.snapToFloor = true;
-          model.scale.set(1, 1, 1);          
+        this.loadModels();
         
-          // Load texture
-          const texture = new THREE.TextureLoader().load('/assets/textures/aircraftpanels.jpg');
-        
-          // Wait for all transforms to apply before computing bounding box
-          model.updateWorldMatrix(true, true);
-          const box = new THREE.Box3().setFromObject(model);
-          const height = box.max.y - box.min.y;
-          const offsetY = box.min.y;
-          model.userData.boundingBox = { height, offsetY };
-        
-          // Position mug on the floor
-          model.position.y = -offsetY;
-        
-          // Apply texture
-          model.traverse((child) => {
-            if (child.isMesh) {
-              child.material.map = texture;
-              child.material.needsUpdate = true;
-              child.material.roughness = 0.6;
-              child.material.metalness = 0.1;
-            }
-          });
-        
-          this.scene.add(model);
-        });
-        
-        
-        
-
         this.InteractionHandler = new InteractionHandler(this.renderer, this.camera, this.scene, this.controls);
 
         this.setupObjectSelection();
 
         this.animate();
         window.addEventListener('resize', this.onWindowResize.bind(this));
+    }
+
+    loadModels() {
+        this.objectManager.loadModel('bathroom cabinet', '/assets/models/bathroom_cabinet.glb', (model) => {
+          console.log('bathroom cabinet model loaded');      
+          model.userData.collidable = true;      
+          model.scale.set(1.2, 1.2, 1.2);
+          model.position.set(0.5, -0.5, 0);
+          this.scene.add(model);  
+          this.collisionManager.registerCollidable(model);          
+      });
+
+      this.objectManager.loadModel('soap dispenser', '/assets/models/soap_dispenser.glb', (model) => {
+        console.log('soap dispenser model loaded');
+        model.userData.collidable = true;
+        model.userData.snapToFloor = true;
+        model.scale.set(0.05, 0.05, 0.05);
+        model.position.set(1, 0, 0);
+        this.scene.add(model);
+        this.collisionManager.registerCollidable(model);
+      });
+
+      this.objectManager.loadModel('electric toothbrush', '/assets/models/electric_toothbrush.glb', (model) => {
+        console.log('electric toothbrush model loaded');
+        model.userData.snapToFloor = true;
+        model.scale.set(2, 2, 2);
+        model.position.set(2, 0, 0);
+        this.scene.add(model);
+        this.collisionManager.registerCollidable(model);
+      });
+
+      this.objectManager.loadModel('mug', '/assets/models/mug.glb', (model) => {
+        console.log('glass mug model loaded');
+        model.userData.snapToFloor = true;
+        model.scale.set(1, 1, 1);          
+      
+        // Load texture
+        const texture = new THREE.TextureLoader().load('/assets/textures/aircraftpanels.jpg');
+      
+        // Wait for all transforms to apply before computing bounding box
+        model.updateWorldMatrix(true, true);
+        const box = new THREE.Box3().setFromObject(model);
+        const height = box.max.y - box.min.y;
+        const offsetY = box.min.y;
+        model.userData.boundingBox = { height, offsetY };
+      
+        // Position mug on the floor
+        model.position.y = -offsetY;
+      
+        // Apply texture
+        model.traverse((child) => {
+          if (child.isMesh) {
+            child.material.map = texture;
+            child.material.needsUpdate = true;
+            child.material.roughness = 0.6;
+            child.material.metalness = 0.1;
+          }
+        });
+      
+        this.scene.add(model);
+        this.collisionManager.registerCollidable(model);
+      });
     }
 
     addLights() {

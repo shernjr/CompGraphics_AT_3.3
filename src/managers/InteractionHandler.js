@@ -1,11 +1,12 @@
 import * as THREE from 'three';
 
 export default class InteractionHandler {
-  constructor(renderer, camera, scene, controls) {
+  constructor(renderer, camera, scene, controls, collisionManager) {
     this.renderer = renderer;
     this.camera = camera;
     this.scene = scene;
     this.controls = controls;
+    this.collisionManager = collisionManager;
 
     this.selectedObject = null;
     this.isDragging = false;
@@ -68,34 +69,41 @@ export default class InteractionHandler {
 
   onMouseMove(event) {
     if (!this.isDragging || !this.selectedObject) return;
-  
+
     // Move along the XZ ground plane
     this.updateRaycaster(event);
     const newPoint = new THREE.Vector3();
-  
+
     if (this.raycaster.ray.intersectPlane(this.groundPlane, newPoint)) {
       const delta = new THREE.Vector3().subVectors(newPoint, this.lastIntersectionPoint);
       this.selectedObject.position.x += delta.x;
       this.selectedObject.position.z += delta.z;
-  
-      // Keep object on the floor
-      if (this.selectedObject.userData.snapToFloor) {
-        // Only calculate bounding box once at the beginning to prevent issues
-        if (!this.selectedObject.userData.boundingBox) {
-          const box = new THREE.Box3().setFromObject(this.selectedObject);
-          const height = box.max.y - box.min.y;
-          this.selectedObject.userData.boundingBox = { height, offsetY: box.min.y };  // Store the height and offset
+
+      // Check for collision before applying the new position
+      const originalPosition = this.selectedObject.position.clone();
+
+      // Only apply movement if there's no collision
+      if (this.checkCollision(this.selectedObject)) {
+        // Revert to the original position if there's a collision
+        this.selectedObject.position.copy(originalPosition);
+      } else {
+        // Keep object on the floor
+        if (this.selectedObject.userData.snapToFloor) {
+          // Only calculate bounding box once at the beginning to prevent issues
+          if (!this.selectedObject.userData.boundingBox) {
+            const box = new THREE.Box3().setFromObject(this.selectedObject);
+            const height = box.max.y - box.min.y;
+            this.selectedObject.userData.boundingBox = { height, offsetY: box.min.y };  // Store the height and offset
+          }
+
+          // Set the position based on the bounding box offset
+          this.selectedObject.position.y = -this.selectedObject.userData.boundingBox.offsetY;
         }
-  
-        // Set the position based on the bounding box offset
-        this.selectedObject.position.y = -this.selectedObject.userData.boundingBox.offsetY;
       }
-  
+
       this.lastIntersectionPoint.copy(newPoint);
     }
   }
-  
-  
   
   onMouseUp() {
     if (this.isDragging && this.selectedObject) {
@@ -107,6 +115,25 @@ export default class InteractionHandler {
     this.isDragging = false;
     this.selectedObject = null;
   }
+
+  checkCollision(objectToMove) {
+    const movingBox = new THREE.Box3().setFromObject(objectToMove);
+  
+    for (const obj of this.scene.children) {
+      if (
+        obj !== objectToMove &&
+        obj.isMesh &&
+        obj.userData.collidable !== false // skip non-collidables like floor
+      ) {
+        const objBox = new THREE.Box3().setFromObject(obj);
+        if (movingBox.intersectsBox(objBox)) {
+          return true; // Collision detected
+        }
+      }
+    }
+    return false;
+  }
+  
 
   updateRaycaster(event) {
     this.updateMousePosition(event);
