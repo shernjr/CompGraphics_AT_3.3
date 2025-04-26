@@ -1,44 +1,44 @@
+import * as THREE from 'three';
+
 export default class CollisionManager {
     constructor(scene) {
       this.scene = scene;
-      this.collidableObjects = [];  // Store references to collidable objects
+      this.collidableObjects = [];
     }
   
-    // Register an object as collidable
     registerCollidable(object) {
       if (object.userData.collidable && !this.collidableObjects.includes(object)) {
         this.collidableObjects.push(object);
+        
+        // Recursively register all children if they're meshes
+        object.traverse(child => {
+          if (child.isMesh && child.userData.collidable !== false) {
+            this.collidableObjects.push(child);
+          }
+        });
       }
     }
   
-    // Unregister an object from collision checks
     unregisterCollidable(object) {
-      const index = this.collidableObjects.indexOf(object);
-      if (index !== -1) {
-        this.collidableObjects.splice(index, 1);
-      }
+      this.collidableObjects = this.collidableObjects.filter(obj => 
+        obj !== object && !object.children.includes(obj)
+      );
     }
   
-    // Check if the object collides with any collidable object in the scene
     checkCollision(object) {
+      object.updateWorldMatrix(true, true);
       const box = new THREE.Box3().setFromObject(object);
   
-      // Check for intersection with all collidable objects
-      for (let i = 0; i < this.collidableObjects.length; i++) {
-        const otherObject = this.collidableObjects[i];
-  
-        // Skip the object itself or objects that are not collidable
+      for (const otherObject of this.collidableObjects) {
         if (otherObject === object) continue;
   
+        otherObject.updateWorldMatrix(true, true);
         const otherBox = new THREE.Box3().setFromObject(otherObject);
         
-        // If there's an intersection, return true
         if (box.intersectsBox(otherBox)) {
           return true;
         }
       }
-  
-      return false; // No collision
+      return false;
     }
   }
-  

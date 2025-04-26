@@ -68,38 +68,34 @@ export default class InteractionHandler {
 
   onMouseMove(event) {
     if (!this.isDragging || !this.selectedObject) return;
-
-    // Move along the XZ ground plane
+  
+    // Debug: show bounding boxes
+    this.showBoundingBox(this.selectedObject);
+    this.collisionManager.collidableObjects.forEach(obj => {
+      if (obj !== this.selectedObject) this.showBoundingBox(obj);
+    });
+  
     this.updateRaycaster(event);
     const newPoint = new THREE.Vector3();
-
+  
     if (this.raycaster.ray.intersectPlane(this.groundPlane, newPoint)) {
-      const delta = new THREE.Vector3().subVectors(newPoint, this.lastIntersectionPoint);
-      this.selectedObject.position.x += delta.x;
-      this.selectedObject.position.z += delta.z;
-
-      // Check for collision before applying the new position
+      const delta = newPoint.clone().sub(this.lastIntersectionPoint);
       const originalPosition = this.selectedObject.position.clone();
-
-      // Only apply movement if there's no collision
-      if (this.checkCollision(this.selectedObject)) {
-        // Revert to the original position if there's a collision
+      
+      // Apply movement
+      this.selectedObject.position.add(delta);
+      this.selectedObject.updateWorldMatrix(true, true);
+  
+      // Check collision
+      if (this.collisionManager.checkCollision(this.selectedObject)) {
+        console.log("Collision detected! Blocking movement.");
         this.selectedObject.position.copy(originalPosition);
-      } else {
-        // Keep object on the floor
-        if (this.selectedObject.userData.snapToFloor) {
-          // Only calculate bounding box once at the beginning to prevent issues
-          if (!this.selectedObject.userData.boundingBox) {
-            const box = new THREE.Box3().setFromObject(this.selectedObject);
-            const height = box.max.y - box.min.y;
-            this.selectedObject.userData.boundingBox = { height, offsetY: box.min.y };  // Store the height and offset
-          }
-
-          // Set the position based on the bounding box offset
-          this.selectedObject.position.y = -this.selectedObject.userData.boundingBox.offsetY;
-        }
+      } 
+      // Snap to floor if no collision and object should snap
+      else if (this.selectedObject.userData.snapToFloor) {
+        this.snapObjectToFloor(this.selectedObject); // Now this method exists
       }
-
+  
       this.lastIntersectionPoint.copy(newPoint);
     }
   }
@@ -116,14 +112,18 @@ export default class InteractionHandler {
   }
 
   checkCollision(objectToMove) {
+    // Update the world matrix to ensure accurate bounding box calculation
+    objectToMove.updateWorldMatrix(true, true);
+    
+    // Get bounding box of the moving object
     const movingBox = new THREE.Box3().setFromObject(objectToMove);
-  
-    for (const obj of this.scene.children) {
-      if (
-        obj !== objectToMove &&
-        obj.isMesh &&
-        obj.userData.collidable !== false // skip non-collidables like floor
-      ) {
+    
+    // Check against all collidable objects
+    for (const obj of this.collisionManager.collidableObjects) {
+      if (obj !== objectToMove) {
+        // Update world matrix for the object we're checking against
+        obj.updateWorldMatrix(true, true);
+        
         const objBox = new THREE.Box3().setFromObject(obj);
         if (movingBox.intersectsBox(objBox)) {
           return true; // Collision detected
@@ -141,5 +141,34 @@ export default class InteractionHandler {
   updateMousePosition(event) {
     this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
     this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+  }
+
+  showBoundingBox(object) {
+    const box = new THREE.Box3().setFromObject(object);
+    const helper = new THREE.Box3Helper(box, 0xffff00);
+    this.scene.add(helper);
+    
+    // Remove after 2 seconds
+    setTimeout(() => {
+      this.scene.remove(helper);
+    }, 1);
+  }
+
+  // In InteractionHandler.js
+  snapObjectToFloor(object) {
+    if (!object.userData.boundingBox) {
+      // Calculate bounding box if not already stored
+      const box = new THREE.Box3().setFromObject(object);
+      const height = box.max.y - box.min.y;
+      object.userData.boundingBox = { 
+        height, 
+        offsetY: box.min.y 
+      };
+    }
+    // Snap to floor based on the object's bounding box
+    object.position.y = -object.userData.boundingBox.offsetY;
+    
+    // Force update the world matrix
+    object.updateWorldMatrix(true, true);
   }
 }
