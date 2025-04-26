@@ -46,34 +46,32 @@ export default class InteractionHandler {
     if (!event.shiftKey) return;
   
     this.updateRaycaster(event);
-  
     const intersects = this.raycaster.intersectObjects(this.scene.children, true);
   
     if (intersects.length > 0) {
       let selectedObject = intersects[0].object;
-    
+      
       // Prevent floor from being selected
       if (selectedObject.userData.isFloor) return;
-    
-      while (selectedObject.parent && selectedObject.parent.type !== 'Scene') {
+      
+      // Find the root collidable parent
+      while (selectedObject.parent && 
+             !selectedObject.userData.collidable && 
+             selectedObject.parent.type !== 'Scene') {
         selectedObject = selectedObject.parent;
       }
-    
-      this.selectedObject = selectedObject;
-      this.isDragging = true;
-      this.lastIntersectionPoint.copy(intersects[0].point);
-      this.lastMousePosition.set(event.clientX, event.clientY);
+      
+      if (selectedObject.userData.collidable) {
+        this.selectedObject = selectedObject;
+        this.isDragging = true;
+        this.lastIntersectionPoint.copy(intersects[0].point);
+        this.lastMousePosition.set(event.clientX, event.clientY);
+      }
     }
   }
 
   onMouseMove(event) {
     if (!this.isDragging || !this.selectedObject) return;
-  
-    // Debug: show bounding boxes
-    this.showBoundingBox(this.selectedObject);
-    this.collisionManager.collidableObjects.forEach(obj => {
-      if (obj !== this.selectedObject) this.showBoundingBox(obj);
-    });
   
     this.updateRaycaster(event);
     const newPoint = new THREE.Vector3();
@@ -82,18 +80,22 @@ export default class InteractionHandler {
       const delta = newPoint.clone().sub(this.lastIntersectionPoint);
       const originalPosition = this.selectedObject.position.clone();
       
-      // Apply movement
-      this.selectedObject.position.add(delta);
-      this.selectedObject.updateWorldMatrix(true, true);
+      // Apply movement in small steps for better collision detection
+      const steps = 5;
+      for (let i = 0; i < steps; i++) {
+        this.selectedObject.position.x += delta.x / steps;
+        this.selectedObject.position.z += delta.z / steps;
+        this.selectedObject.updateWorldMatrix(true, true);
   
-      // Check collision
-      if (this.collisionManager.checkCollision(this.selectedObject)) {
-        console.log("Collision detected! Blocking movement.");
-        this.selectedObject.position.copy(originalPosition);
-      } 
-      // Snap to floor if no collision and object should snap
-      else if (this.selectedObject.userData.snapToFloor) {
-        this.snapObjectToFloor(this.selectedObject); // Now this method exists
+        if (this.checkCollision(this.selectedObject)) {
+          console.log("Collision detected at step", i);
+          this.selectedObject.position.copy(originalPosition);
+          break;
+        }
+      }
+  
+      if (this.selectedObject.userData.snapToFloor) {
+        this.snapObjectToFloor(this.selectedObject);
       }
   
       this.lastIntersectionPoint.copy(newPoint);
@@ -112,22 +114,21 @@ export default class InteractionHandler {
   }
 
   checkCollision(objectToMove) {
-    // Update the world matrix to ensure accurate bounding box calculation
     objectToMove.updateWorldMatrix(true, true);
-    
-    // Get bounding box of the moving object
     const movingBox = new THREE.Box3().setFromObject(objectToMove);
     
-    // Check against all collidable objects
-    for (const obj of this.collisionManager.collidableObjects) {
-      if (obj !== objectToMove) {
-        // Update world matrix for the object we're checking against
-        obj.updateWorldMatrix(true, true);
-        
-        const objBox = new THREE.Box3().setFromObject(obj);
-        if (movingBox.intersectsBox(objBox)) {
-          return true; // Collision detected
-        }
+    // Get all collidable objects EXCEPT the moving object and its children
+    const objectsToCheck = this.collisionManager.collidableObjects.filter(obj => {
+      return obj !== objectToMove && !objectToMove.children.includes(obj);
+    });
+  
+    for (const obj of objectsToCheck) {
+      obj.updateWorldMatrix(true, true);
+      const objBox = new THREE.Box3().setFromObject(obj);
+      
+      if (movingBox.intersectsBox(objBox)) {
+        console.log(`Collision between ${objectToMove.name} and ${obj.name}`);
+        return true;
       }
     }
     return false;

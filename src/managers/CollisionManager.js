@@ -7,22 +7,20 @@ export default class CollisionManager {
     }
   
     registerCollidable(object) {
-      if (object.userData.collidable && !this.collidableObjects.includes(object)) {
+      // Only register if it's a root object and not already registered
+      if (object.userData.collidable && 
+          !object.parent?.userData?.collidable && 
+          !this.collidableObjects.includes(object)) {
         this.collidableObjects.push(object);
-        
-        // Recursively register all children if they're meshes
-        object.traverse(child => {
-          if (child.isMesh && child.userData.collidable !== false) {
-            this.collidableObjects.push(child);
-          }
-        });
+        console.log(`Registered ${object.userData.name || 'object'} for collision`);
       }
     }
   
     unregisterCollidable(object) {
-      this.collidableObjects = this.collidableObjects.filter(obj => 
-        obj !== object && !object.children.includes(obj)
-      );
+      const index = this.collidableObjects.indexOf(object);
+      if (index !== -1) {
+        this.collidableObjects.splice(index, 1);
+      }
     }
   
     checkCollision(object) {
@@ -36,6 +34,7 @@ export default class CollisionManager {
         const otherBox = new THREE.Box3().setFromObject(otherObject);
         
         if (box.intersectsBox(otherBox)) {
+          console.log(`Collision between ${object.userData.name} and ${otherObject.userData.name}`);
           return true;
         }
       }

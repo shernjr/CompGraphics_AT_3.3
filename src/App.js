@@ -51,77 +51,82 @@ export default class App {
     }
 
     loadModels() {
+      // Helper function to find the root parent
+      const getRootParent = (object) => {
+        while (object.parent && object.parent.type !== 'Scene') {
+          object = object.parent;
+        }
+        return object;
+      };
+    
+      // Bathroom Cabinet
       this.objectManager.loadModel('bathroom cabinet', '/assets/models/bathroom_cabinet.glb', (model) => {
         console.log('bathroom cabinet model loaded');
         const texture = new THREE.TextureLoader().load('/assets/textures/aircraftpanels.jpg');
+        const rootModel = getRootParent(model);
         
-        model.traverse((child) => {
+        rootModel.traverse((child) => {
           if (child.isMesh) {
-            child.userData.collidable = true; // Add this line
             child.material.map = texture;
             child.material.needsUpdate = true;
           }
         });
         
-        model.userData.collidable = true; // Also set on parent
-        model.scale.set(1.2, 1.2, 1.2);
-        model.position.set(-0.5, -0.5, 0);
-        this.scene.add(model);
-        this.collisionManager.registerCollidable(model);
+        rootModel.userData = {
+          collidable: true,
+          name: 'bathroom cabinet',
+          boundingBox: this.calculateBoundingBox(rootModel)
+        };
+        
+        rootModel.scale.set(1.2, 1.2, 1.2);
+        rootModel.position.set(-0.5, -0.5, 0);
+        this.scene.add(rootModel);
+        this.collisionManager.registerCollidable(rootModel);
       });
     
-
+      // Soap Dispenser
       this.objectManager.loadModel('soap dispenser', '/assets/models/soap_dispenser.glb', (model) => {
-        console.log('soap dispenser model loaded');        
-        model.userData.snapToFloor = true;
-        model.scale.set(0.05, 0.05, 0.05);
-        model.position.set(1, 0, 0);
-
-        model.traverse(child => {
-          if (child.isMesh) {
-            child.userData.collidable = true;
-          }
-        });
-
-        this.scene.add(model);
-        this.collisionManager.registerCollidable(model);
+        console.log('soap dispenser model loaded');
+        const rootModel = getRootParent(model);
+        
+        rootModel.userData = {
+          collidable: true,
+          name: 'soap dispenser',
+          snapToFloor: true,
+          boundingBox: this.calculateBoundingBox(rootModel)
+        };
+        
+        rootModel.scale.set(0.05, 0.05, 0.05);
+        rootModel.position.set(1, 0, 0);
+        this.scene.add(rootModel);
+        this.collisionManager.registerCollidable(rootModel);
       });
-
+    
+      // Electric Toothbrush
       this.objectManager.loadModel('electric toothbrush', '/assets/models/electric_toothbrush.glb', (model) => {
         console.log('electric toothbrush model loaded');
-        model.traverse(child => {
-          if (child.isMesh) {
-            child.userData.collidable = true; // Add this
-          }
-        });
-        model.userData.snapToFloor = true;
-        model.scale.set(2, 2, 2);
-        model.position.set(2, 0, 0);
-        this.scene.add(model);
-        this.collisionManager.registerCollidable(model);
+        const rootModel = getRootParent(model);
+        
+        rootModel.userData = {
+          collidable: true,
+          name: 'electric toothbrush',
+          snapToFloor: true,
+          boundingBox: this.calculateBoundingBox(rootModel)
+        };
+        
+        rootModel.scale.set(2, 2, 2);
+        rootModel.position.set(2, 0, 0);
+        this.scene.add(rootModel);
+        this.collisionManager.registerCollidable(rootModel);
       });
-
+    
+      // Mug
       this.objectManager.loadModel('mug', '/assets/models/mug.glb', (model) => {
         console.log('glass mug model loaded');
-        model.userData.collidable = true;
-        model.userData.snapToFloor = true;
-        model.scale.set(1, 1, 1);          
-      
-        // Load texture
+        const rootModel = getRootParent(model);
         const texture = new THREE.TextureLoader().load('/assets/textures/aircraftpanels.jpg');
-      
-        // Wait for all transforms to apply before computing bounding box
-        model.updateWorldMatrix(true, true);
-        const box = new THREE.Box3().setFromObject(model);
-        const height = box.max.y - box.min.y;
-        const offsetY = box.min.y;
-        model.userData.boundingBox = { height, offsetY };
-      
-        // Position mug on the floor
-        model.position.y = -offsetY;
-      
-        // Apply texture
-        model.traverse((child) => {
+        
+        rootModel.traverse((child) => {
           if (child.isMesh) {
             child.material.map = texture;
             child.material.needsUpdate = true;
@@ -129,38 +134,21 @@ export default class App {
             child.material.metalness = 0.1;
           }
         });
-      
-        this.scene.add(model);
-        this.collisionManager.registerCollidable(model);
+        
+        const boundingBox = this.calculateBoundingBox(rootModel);
+        rootModel.userData = {
+          collidable: true,
+          name: 'mug',
+          snapToFloor: true,
+          boundingBox: boundingBox
+        };
+        
+        rootModel.scale.set(1, 1, 1);
+        rootModel.position.y = -boundingBox.offsetY;
+        this.scene.add(rootModel);
+        this.collisionManager.registerCollidable(rootModel);
       });
     }
-
-    CreateTestBoxes() {
-      // Box 1 (Red, stationary)
-      const box1Geometry = new THREE.BoxGeometry(1, 1, 1);
-      const box1Material = new THREE.MeshStandardMaterial({ color: 0xff0000 });
-      const box1 = new THREE.Mesh(box1Geometry, box1Material);
-      box1.position.set(0, 0.5, 0); // Sitting on floor
-      box1.userData.collidable = true;
-      box1.name = "Box1";
-      this.scene.add(box1);
-      this.collisionManager.registerCollidable(box1);
-  
-      // Box 2 (Blue, movable)
-      const box2Geometry = new THREE.BoxGeometry(1, 1, 1);
-      const box2Material = new THREE.MeshStandardMaterial({ color: 0x0000ff });
-      const box2 = new THREE.Mesh(box2Geometry, box2Material);
-      box2.position.set(2, 0.5, 0); // Positioned to the right
-      box2.userData.collidable = true;
-      box2.userData.snapToFloor = true;
-      box2.name = "Box2";
-      this.scene.add(box2);
-      this.collisionManager.registerCollidable(box2);
-  
-      console.log("Test boxes created:");
-      console.log("- Red Box (stationary) at 0,0,0");
-      console.log("- Blue Box (movable) at 2,0,0");
-  }
 
     addLights() {
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
@@ -255,5 +243,18 @@ export default class App {
       this.camera.aspect = window.innerWidth / window.innerHeight;
       this.camera.updateProjectionMatrix();
       this.renderer.setSize(window.innerWidth, window.innerHeight);
+  }
+
+  // Add this method to your App class (at the class level, not inside another method)
+  calculateBoundingBox(object) {
+    object.updateWorldMatrix(true, true);
+    const box = new THREE.Box3().setFromObject(object);
+    return {
+      min: box.min,
+      max: box.max,
+      size: box.getSize(new THREE.Vector3()),
+      height: box.max.y - box.min.y,
+      offsetY: box.min.y
+    };
   }
 }
