@@ -179,8 +179,8 @@ export default class App {
 
         // Back Wall (behind the vanity)
         const backWallGeometry = new THREE.PlaneGeometry(5, 3);
-        //const wallTexture = new THREE.TextureLoader().load('/assets/textures/wall.jpg');
-        const wallMaterial = new THREE.MeshStandardMaterial({ map: texture });
+        const wallTexture = new THREE.TextureLoader().load('/assets/textures/bricktiles.jpg');
+        const wallMaterial = new THREE.MeshStandardMaterial({ map: wallTexture });
 
         const backWall = new THREE.Mesh(backWallGeometry, wallMaterial);
         backWall.position.set(0, 1.5, -2.5); // adjust z to move it behind furniture
