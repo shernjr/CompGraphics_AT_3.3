@@ -64,7 +64,6 @@ export default class InteractionHandler {
       this.lastIntersectionPoint.copy(intersects[0].point);
       this.lastMousePosition.set(event.clientX, event.clientY);
     }
-    
   }
 
   onMouseMove(event) {
@@ -104,7 +103,7 @@ export default class InteractionHandler {
       this.lastIntersectionPoint.copy(newPoint);
     }
   }
-  
+
   onMouseUp() {
     if (this.isDragging && this.selectedObject) {
       if (this.originalMaterials.has(this.selectedObject)) {
@@ -133,7 +132,6 @@ export default class InteractionHandler {
     }
     return false;
   }
-  
 
   updateRaycaster(event) {
     this.updateMousePosition(event);

@@ -50,14 +50,25 @@ export default class App {
     }
 
     loadModels() {
-        this.objectManager.loadModel('bathroom cabinet', '/assets/models/bathroom_cabinet.glb', (model) => {
-          console.log('bathroom cabinet model loaded');      
-          model.userData.collidable = true;      
-          model.scale.set(1.2, 1.2, 1.2);
-          model.position.set(0.5, -0.5, 0);
-          this.scene.add(model);  
-          this.collisionManager.registerCollidable(model);          
-      });
+      this.objectManager.loadModel('bathroom cabinet', '/assets/models/bathroom_cabinet.glb', (model) => {
+        console.log('bathroom cabinet model loaded');
+    
+        const texture = new THREE.TextureLoader().load('/assets/textures/aircraftpanels.jpg');
+    
+        model.traverse((child) => {
+            if (child.isMesh) {
+                child.material.map = texture; // Assign the texture to the material's map
+                child.material.needsUpdate = true; // Ensure the material is updated
+            }
+        });
+    
+        model.userData.collidable = true;
+        model.scale.set(1.2, 1.2, 1.2);
+        model.position.set(0.5, -0.5, 0);
+        this.scene.add(model);
+        this.collisionManager.registerCollidable(model);
+    });
+    
 
       this.objectManager.loadModel('soap dispenser', '/assets/models/soap_dispenser.glb', (model) => {
         console.log('soap dispenser model loaded');
