@@ -1,9 +1,11 @@
 import * as THREE from 'three';
 import ScaleUI from '../src/ui/ScaleUI.js';
 import RotateUI from '../src/ui/RotateUI.js';
+import { TextureLoader, RepeatWrapping } from 'three';
 import {OrbitControls} from '../lib/OrbitControls.js';
 import ObjectManager from '../src/managers/ObjectManager.js';
 import InteractionHandler from './managers/InteractionHandler.js';
+
 
 export default class App {
     constructor() {
@@ -37,28 +39,61 @@ export default class App {
         this.objectManager = new ObjectManager(this.scene);
 
         this.objectManager.loadModel('bathroom cabinet', '/assets/models/bathroom_cabinet.glb', (model) => {
-            console.log('bathroom cabinet model loaded');
+            console.log('bathroom cabinet model loaded');            
+            model.scale.set(1.2, 1.2, 1.2);
+            model.position.set(0.5, -0.5, 0);
             this.scene.add(model);
         });
 
         this.objectManager.loadModel('soap dispenser', '/assets/models/soap_dispenser.glb', (model) => {
           console.log('soap dispenser model loaded');
+          model.userData.snapToFloor = true;
+          model.scale.set(0.05, 0.05, 0.05);
+          model.position.set(1, 0, 0);
           this.scene.add(model);
         });
 
         this.objectManager.loadModel('electric toothbrush', '/assets/models/electric_toothbrush.glb', (model) => {
           console.log('electric toothbrush model loaded');
+          model.userData.snapToFloor = true;
+          model.scale.set(2, 2, 2);
+          model.position.set(2, 0, 0);
           this.scene.add(model);
         });
 
         this.objectManager.loadModel('mug', '/assets/models/mug.glb', (model) => {
           console.log('glass mug model loaded');
-
-          model.scale.set(0.3, 0.3, 0.3);
-          model.position.set(0, 1, 0);
-
+          model.userData.snapToFloor = true;
+          model.scale.set(1, 1, 1);          
+        
+          // Load texture
+          const texture = new THREE.TextureLoader().load('/assets/textures/aircraftpanels.jpg');
+        
+          // Wait for all transforms to apply before computing bounding box
+          model.updateWorldMatrix(true, true);
+          const box = new THREE.Box3().setFromObject(model);
+          const height = box.max.y - box.min.y;
+          const offsetY = box.min.y;
+          model.userData.boundingBox = { height, offsetY };
+        
+          // Position mug on the floor
+          model.position.y = -offsetY;
+        
+          // Apply texture
+          model.traverse((child) => {
+            if (child.isMesh) {
+              child.material.map = texture;
+              child.material.needsUpdate = true;
+              child.material.roughness = 0.6;
+              child.material.metalness = 0.1;
+            }
+          });
+        
           this.scene.add(model);
         });
+        
+        
+        
 
         this.InteractionHandler = new InteractionHandler(this.renderer, this.camera, this.scene, this.controls);
 
@@ -78,12 +113,20 @@ export default class App {
     }
 
     addFloor() {
+
+      const texture = new THREE.TextureLoader().load('/assets/textures/tile.jpg');
+      texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+      texture.repeat.set(4, 4); // Adjust tiling density
+
         const floor = new THREE.Mesh(
-            new THREE.PlaneGeometry(10, 10),
-            new THREE.MeshStandardMaterial({ color: 0xe0e0e0 })
+            new THREE.PlaneGeometry(5, 5),
+            new THREE.MeshStandardMaterial({ map: texture, roughness: 0.1 })
         );
 
         floor.rotation.x = -Math.PI / 2;
+        floor.receiveShadow = true;
+        floor.userData.isFloor = true;
+        floor.name = 'floor';
         this.scene.add(floor);
     }
 
